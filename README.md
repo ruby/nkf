@@ -1,8 +1,8 @@
-# Nkf
+# NKF
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/nkf`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+This is a Ruby Extension version of nkf (Network Kanji Filter).
+It converts the first argument and returns converted result. Conversion
+details are specified by flags as the first argument.
 
 ## Installation
 
@@ -22,7 +22,10 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+require 'nkf'
+output = NKF.nkf("-s", input)
+```
 
 ## Development
 
@@ -32,5 +35,4 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/hsbt/nkf.
-
+Bug reports and pull requests are welcome on GitHub at https://github.com/ruby/nkf.
