@@ -9,3 +9,6 @@
 *.bundle
 *.dll
 *.so
+lib/nkf.jar
+.idea
+nkf.iml
