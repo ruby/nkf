@@ -532,9 +532,9 @@ public class RubyNKF {
             String[] mime = str.split("^=\\?|\\?|\\?=$");
             String charset = detectCharset(mime[1]);
             int encode = mime[2].charAt(0);
-            ByteList body = new ByteList(mime[3].getBytes(), ASCIIEncoding.INSTANCE);
+            RubyString body = EncodingUtils.newExternalStringWithEncoding(context.runtime, mime[3], ASCIIEncoding.INSTANCE);
 
-            final RubyArray array;
+            final RubyArray<?> array;
             if ('B' == encode || 'b' == encode) { // BASE64
                 array = Pack.unpack(context, body, PACK_BASE64);
             } else { // Qencode
