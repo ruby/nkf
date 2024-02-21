@@ -266,174 +266,188 @@ rb_nkf_guess(VALUE obj, VALUE src)
  *  So users needn't set the input kanji code explicitly.
  *
  *  By default, X0201 kana is converted into X0208 kana.
- *  For X0201 kana, SO/SI, SSO and ESC-(-I methods are supported.
+ *  For X0201 kana, SO/SI, SSO and ESC-<code>(</code>-<code>I</code> methods are supported.
  *  For automatic code detection, nkf assumes no X0201 kana in Shift_JIS.
- *  To accept X0201 in Shift_JIS, use <b>-X</b>, <b>-x</b> or <b>-S</b>.
+ *  To accept X0201 in Shift_JIS, use {+-X+}[rdoc-ref:NKF@-X+-x],
+ *  {+-x+}[rdoc-ref:NKF@-X+-x] or {+-S+}[rdoc-ref:NKF@-S].
  *
  *  == Flags
  *
- *  === -b -u
+ *  === +-b+ +-u+
  *
  *  Output is buffered (DEFAULT), Output is unbuffered.
  *
- *  === -j -s -e -w -w16 -w32
+ *  === +-j+ +-s+ +-e+ +-w+ +-w16+ +-w32+
  *
  *  Output code is ISO-2022-JP (7bit JIS), Shift_JIS, EUC-JP,
  *  UTF-8N, UTF-16BE, UTF-32BE.
  *  Without this option and compile option, ISO-2022-JP is assumed.
  *
- *  === -J -S -E -W -W16 -W32
+ *  +-w16+ and +-w32+ can be followed by +L+ (little endian) or +B+
+ *  (big endian).
+ *
+ *  +-w16+ and +-w32+ can be followed by +0+ too, and BOM will not be
+ *  used in the output.
+ *
+ *  === +-J+ +-S+ +-E+ +-W+ +-W16+ +-W32+
  *
  *  Input assumption is JIS 7 bit, Shift_JIS, EUC-JP,
  *  UTF-8, UTF-16, UTF-32.
  *
- *  ==== -J
+ *  +-W16+ and +-W32+ can be followed by +L+ (little endian) or +B+
+ *  (big endian).
+ *
+ *  ==== +-J+
  *
  *  Assume  JIS input. It also accepts EUC-JP.
  *  This is the default. This flag does not exclude Shift_JIS.
  *
- *  ==== -S
+ *  ==== +-S+
  *
  *  Assume Shift_JIS and X0201 kana input. It also accepts JIS.
- *  EUC-JP is recognized as X0201 kana. Without <b>-x</b> flag,
+ *  EUC-JP is recognized as X0201 kana. Without {+-x+}[rdoc-ref:NKF@-X+-x] flag,
  *  X0201 kana (halfwidth kana) is converted into X0208.
  *
- *  ==== -E
+ *  ==== +-E+
  *
  *  Assume EUC-JP input. It also accepts JIS.
- *  Same as -J.
+ *  Same as +-J+.
  *
- *  === -t
+ *  === +-t+
  *
  *  No conversion.
  *
- *  === -i_
+ *  === +-i+[@B]
  *
- *  Output sequence to designate JIS-kanji. (DEFAULT B)
+ *  Output sequence after ESC-<code>$</code> to designate JIS-kanji. (DEFAULT +B+)
  *
- *  === -o_
+ *  === +-o+[JBH]
  *
- *  Output sequence to designate ASCII. (DEFAULT B)
+ *  Output sequence after ESC-<code>(</code> to designate ASCII. (DEFAULT +B+)
  *
- *  === -r
+ *  === +-r+
  *
  *  {de/en}crypt ROT13/47
  *
- *  === \-h[123] --hiragana --katakana --katakana-hiragana
+ *  === +-h+[123] +--hiragana+ +--katakana+ +--katakana-hiragana+
  *
- *  [-h1 --hiragana] Katakana to Hiragana conversion.
+ *  [+-h1+ +--hiragana+] Katakana to Hiragana conversion.
  *
- *  [-h2 --katakana] Hiragana to Katakana conversion.
+ *  [+-h2+ +--katakana+] Hiragana to Katakana conversion.
  *
- *  [-h3 --katakana-hiragana] Katakana to Hiragana and Hiragana to Katakana conversion.
+ *  [+-h3+ +--katakana-hiragana+] Katakana to Hiragana and Hiragana to Katakana conversion.
  *
- *  === -T
+ *  === +-T+
  *
  *  Text mode output (MS-DOS)
  *
- *  === -l
+ *  === +-l+
  *
  *  ISO8859-1 (Latin-1) support
  *
- *  === -f[<code>m</code> [- <code>n</code>]]
+ *  === +-f+[_m_ [+-+ _n_]]
  *
- *  Folding on <code>m</code> length with <code>n</code> margin in a line.
+ *  Folding on _m_ length with _n_ margin in a line.
  *  Without this option, fold length is 60 and fold margin is 10.
  *
- *  === -F
+ *  === +-F+
  *
  *  New line preserving line folding.
  *
- *  === \-Z[0-3]
+ *  === +-Z+[0-3]
  *
- *  Convert X0208 alphabet (Fullwidth Alphabets) to ASCII.
+ *  Convert X0208 alphabet, digits and punctuations (Fullwidth
+ *  Alphabets) to ASCII.
  *
- *  [-Z -Z0] Convert X0208 alphabet to ASCII.
+ *  [+-Z+ +-Z0+] Convert X0208 alphabet to ASCII.
  *
- *  [-Z1] Converts X0208 kankaku to single ASCII space.
+ *  [+-Z1+] Converts X0208 kankaku to single ASCII space.
  *
- *  [-Z2] Converts X0208 kankaku to double ASCII spaces.
+ *  [+-Z2+] Converts X0208 kankaku to double ASCII spaces.
  *
- *  [-Z3] Replacing Fullwidth >, <, ", & into '&gt;', '&lt;', '&quot;', '&amp;' as in HTML.
+ *  [+-Z3+] Replacing Fullwidth <code>></code>, <code><</code>,
+ *          <code>"</code>, <code>&</code> into <code>&gt;</code>,
+ *          <code>&lt;</code>, <code>&quot;</code>, <code>&amp;</code>
+ *          as in HTML.
  *
- *  === -X -x
+ *  === +-X+ +-x+
  *
  *  Assume X0201 kana in MS-Kanji.
- *  With <b>-X</b> or without this option, X0201 is converted into X0208 Kana.
- *  With <b>-x</b>, try to preserve X0208 kana and do not convert X0201 kana to X0208.
- *  In JIS output, ESC-(-I is used. In EUC output, SSO is used.
+ *  With +-X+ or without this option, X0201 is converted into X0208 Kana.
+ *  With +-x+, try to preserve X0208 kana and do not convert X0201 kana to X0208.
+ *  In JIS output, ESC-<code>(</code>-<code>I</code> is used. In EUC output, SSO is used.
  *
- *  === \-B[0-2]
+ *  === +-B+[0-2]
  *
  *  Assume broken JIS-Kanji input, which lost ESC.
  *  Useful when your site is using old B-News Nihongo patch.
  *
- *  [-B1] allows any char after ESC-( or ESC-$.
+ *  [+-B1+] allows any char after ESC-<code>(</code> or ESC-<code>$</code>.
  *
- *  [-B2] forces ASCII after NL.
+ *  [+-B2+] forces ASCII after NL.
  *
- *  === -I
+ *  === +-I+
  *
  *  Replacing non iso-2022-jp char into a geta character
  *  (substitute character in Japanese).
  *
- *  === -d -c
+ *  === +-d+ +-c+
  *
- *  Delete \r in line feed, Add \r in line feed.
+ *  Delete <code>\r</code> in line feed, Add <code>\r</code> in line feed.
  *
- *  === \-m[BQN0]
+ *  === +-m+[BQN0]
  *
  *  MIME ISO-2022-JP/ISO8859-1 decode. (DEFAULT)
- *  To see ISO8859-1 (Latin-1) -l is necessary.
+ *  To see ISO8859-1 (Latin-1) +-l+ is necessary.
  *
- *  [-mB] Decode MIME base64 encoded stream. Remove header or other part before
- *  conversion.
+ *  [+-mB+] Decode MIME base64 encoded stream. Remove header or other part before
+ *          conversion.
  *
- *  [-mQ] Decode MIME quoted stream. '_' in quoted stream is converted to space.
+ *  [+-mQ+] Decode MIME quoted stream. '_' in quoted stream is converted to space.
  *
- *  [-mN] Non-strict decoding.
- *  It allows line break in the middle of the base64 encoding.
+ *  [+-mN+] Non-strict decoding.
+ *          It allows line break in the middle of the base64 encoding.
  *
- *  [-m0] No MIME decode.
+ *  [+-m0+] No MIME decode.
  *
- *  === -M
+ *  === +-M+
  *
  *  MIME encode. Header style. All ASCII code and control characters are intact.
  *  Kanji conversion is performed before encoding, so this cannot be used as a picture encoder.
  *
- *  [-MB] MIME encode Base64 stream.
+ *  [+-MB+] MIME encode Base64 stream.
  *
- *  [-MQ] Perform quoted encoding.
+ *  [+-MQ+] Perform quoted encoding.
  *
- *  === -l
+ *  === +-l+
  *
  *  Input and output code is ISO8859-1 (Latin-1) and ISO-2022-JP.
- *  <b>-s</b>, <b>-e</b> and <b>-x</b> are not compatible with this option.
+ *  +-s+, +-e+ and +-x+ are not compatible with this option.
  *
- *  === \-L[uwm]
+ *  === +-L+[uwm]
  *
  *  new line mode
  *  Without this option, nkf doesn't convert line breaks.
  *
- *  [-Lu] unix (LF)
+ *  [+-Lu+] unix (LF)
  *
- *  [-Lw] windows (CRLF)
+ *  [+-Lw+] windows (CRLF)
  *
- *  [-Lm] mac (CR)
+ *  [+-Lm+] mac (CR)
  *
- *  === --fj --unix --mac --msdos --windows
+ *  === +--fj+ +--unix+ +--mac+ +--msdos+ +--windows+
  *
  *  convert for these system
  *
- *  === --jis --euc --sjis --mime --base64
+ *  === +--jis+ +--euc+ +--sjis+ +--mime+ +--base64+
  *
  *  convert for named code
  *
- *  === --jis-input --euc-input --sjis-input --mime-input --base64-input
+ *  === +--jis-input+ +--euc-input+ +--sjis-input+ +--mime-input+ +--base64-input+
  *
  *  assume input system
  *
- *  === --ic=<code>input codeset</code> --oc=<code>output codeset</code>
+ *  === +--ic=+_input-codeset_ +--oc=+_output-codeset_
  *
  *  Set the input or output codeset.
  *  NKF supports following codesets and those codeset name are case insensitive.
@@ -480,40 +494,40 @@ rb_nkf_guess(VALUE obj, VALUE src)
  *
  *  [UTF8-MAC] NKDed UTF-8, a.k.a. UTF8-NFD (input only)
  *
- *  === --fb-{skip, html, xml, perl, java, subchar}
+ *  === +--fb-+{+skip+, +html+, +xml+, +perl+, +java+, +subchar+}
  *
  *  Specify the way that nkf handles unassigned characters.
- *  Without this option, --fb-skip is assumed.
+ *  Without this option, +--fb-skip+ is assumed.
  *
- *  === --prefix= <code>escape character</code> <code>target character</code> ..
+ *  === +--prefix=+ _escape-character_ _target-character_ ..
  *
  *  When nkf converts to Shift_JIS,
  *  nkf adds a specified escape character to specified 2nd byte of Shift_JIS characters.
  *  1st byte of argument is the escape character and following bytes are target characters.
  *
- *  === --no-cp932ext
+ *  === +--no-cp932ext+
  *
  *  Handle the characters extended in CP932 as unassigned characters.
  *
- *  == --no-best-fit-chars
+ *  === +--no-best-fit-chars+
  *
  *  When Unicode to Encoded byte conversion,
  *  don't convert characters which is not round trip safe.
  *  When Unicode to Unicode conversion,
- *  with this and -x option, nkf can be used as UTF converter.
- *  (In other words, without this and -x option, nkf doesn't save some characters)
+ *  with this and +-x+ option, nkf can be used as UTF converter.
+ *  (In other words, without this and +-x+ option, nkf doesn't save some characters)
  *
  *  When nkf convert string which related to path, you should use this option.
  *
- *  === --cap-input
+ *  === +--cap-input+
  *
  *  Decode hex encoded characters.
  *
- *  === --url-input
+ *  === +--url-input+
  *
  *  Unescape percent escaped characters.
  *
- *  === --
+ *  === +--+
  *
  *  Ignore rest of -option.
  */
