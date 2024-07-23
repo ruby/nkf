@@ -28,17 +28,30 @@
 #undef FALSE
 #define putchar(c)      rb_nkf_putchar(c)
 
+#ifndef RB_THREAD_LOCAL_SPECIFIER
+#  if __STDC_VERSION__ >= 201112
+#    define RB_THREAD_LOCAL_SPECIFIER _Thread_local
+#  elif defined(__GNUC__)
+     /* note that ICC (linux) and Clang are covered by __GNUC__ */
+#    define RB_THREAD_LOCAL_SPECIFIER __thread
+#  endif
+#endif
+
+#ifndef RB_THREAD_LOCAL_SPECIFIER
+#  define RB_THREAD_LOCAL_SPECIFIER
+#endif
+
 /* Input/Output pointers */
 
-static unsigned char *output;
-static unsigned char *input;
-static int input_ctr;
-static int i_len;
-static int output_ctr;
-static int o_len;
-static int incsize;
+static RB_THREAD_LOCAL_SPECIFIER unsigned char *output;
+static RB_THREAD_LOCAL_SPECIFIER unsigned char *input;
+static RB_THREAD_LOCAL_SPECIFIER int input_ctr;
+static RB_THREAD_LOCAL_SPECIFIER int i_len;
+static RB_THREAD_LOCAL_SPECIFIER int output_ctr;
+static RB_THREAD_LOCAL_SPECIFIER int o_len;
+static RB_THREAD_LOCAL_SPECIFIER int incsize;
 
-static VALUE result;
+static RB_THREAD_LOCAL_SPECIFIER VALUE result;
 
 static int
 rb_nkf_putchar(unsigned int c)
