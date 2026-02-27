@@ -7,6 +7,25 @@ Rake::TestTask.new(:test) do |t|
   t.test_files = FileList["test/**/test_*.rb"]
 end
 
+namespace :rbs do
+  Rake::TestTask.new(test: :compile) do |t|
+    t.libs << "test_sig"
+    t.ruby_opts << "-rtest_helper"
+    t.test_files = FileList["test_sig/test_*.rb"]
+    t.warning = true
+  end
+
+  desc 'Update RBS comments'
+  task :annotate do
+    require "tmpdir"
+
+    Dir.mktmpdir do |tmpdir|
+      sh("rdoc --ri --output #{tmpdir}/doc --root=. lib")
+      sh("rbs annotate --no-system --no-gems --no-site --no-home -d #{tmpdir}/doc sig")
+    end
+  end
+end
+
 if RUBY_ENGINE == "jruby"
   require "rake/javaextensiontask"
   Rake::JavaExtensionTask.new("nkf") do |ext|
