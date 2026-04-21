@@ -529,6 +529,7 @@ struct nkf_state_t {
     mimeout_state_t mimeout_state;
 
     struct input_code input_code_list[INPUT_CODE_LIST_SIZE];
+    void *callback_arg;
 };
 
 #define input_codename nkf_state->input_codename
