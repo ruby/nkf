@@ -75,7 +75,7 @@ rb_encoding* rb_nkf_enc_get(const char *name)
     return rb_enc_from_index(idx);
 }
 
-int nkf_split_options(const char *arg)
+static int nkf_split_options(nkf_state_t *nkf_state, const char *arg)
 {
     int count = 0;
     unsigned char option[256];
@@ -109,7 +109,7 @@ int nkf_split_options(const char *arg)
             is_double_quoted = TRUE;
         }else if(arg[i] == ' '){
             option[j] = '\0';
-            options(option);
+            options(nkf_state, option);
             j = 0;
         }else{
             option[j++] = arg[i];
@@ -117,7 +117,7 @@ int nkf_split_options(const char *arg)
     }
     if(j){
         option[j] = '\0';
-        options(option);
+        options(nkf_state, option);
     }
     return count;
 }
@@ -136,10 +136,15 @@ int nkf_split_options(const char *arg)
 static VALUE
 rb_nkf_convert(VALUE obj, VALUE opt, VALUE src)
 {
+    nkf_state_t nkf_state_object = {0};
+    nkf_state_t *nkf_state = &nkf_state_object;
     VALUE tmp;
-    reinit();
-    nkf_split_options(StringValueCStr(opt));
-    if (!output_encoding) rb_raise(rb_eArgError, "no output encoding given");
+    nkf_state_init(nkf_state);
+    nkf_split_options(nkf_state, StringValueCStr(opt));
+    if (!output_encoding) {
+        nkf_state_dispose(nkf_state);
+        rb_raise(rb_eArgError, "no output encoding given");
+    }
 
     switch (nkf_enc_to_index(output_encoding)) {
     case UTF_8_BOM:    output_encoding = nkf_enc_from_index(UTF_8); break;
@@ -164,7 +169,7 @@ rb_nkf_convert(VALUE obj, VALUE opt, VALUE src)
 
     /* use _result_ begin*/
     result = tmp;
-    kanji_convert(NULL);
+    kanji_convert(nkf_state, NULL);
     result = Qnil;
     /* use _result_ end */
 
@@ -175,6 +180,7 @@ rb_nkf_convert(VALUE obj, VALUE opt, VALUE src)
     else
         rb_enc_associate(tmp, rb_nkf_enc_get(nkf_enc_name(output_encoding)));
 
+    nkf_state_dispose(nkf_state);
     return tmp;
 }
 
@@ -190,17 +196,21 @@ rb_nkf_convert(VALUE obj, VALUE opt, VALUE src)
 static VALUE
 rb_nkf_guess(VALUE obj, VALUE src)
 {
-    reinit();
+    nkf_state_t nkf_state_object = {0};
+    nkf_state_t *nkf_state = &nkf_state_object;
+    VALUE guessed;
+    nkf_state_init(nkf_state);
 
     input_ctr = 0;
     input = (unsigned char *)StringValuePtr(src);
     i_len = RSTRING_LENINT(src);
 
     guess_f = TRUE;
-    kanji_convert( NULL );
-    guess_f = FALSE;
+    kanji_convert(nkf_state, NULL);
 
-    return rb_enc_from_encoding(rb_nkf_enc_get(get_guessed_code()));
+    guessed = rb_enc_from_encoding(rb_nkf_enc_get(get_guessed_code(nkf_state)));
+    nkf_state_dispose(nkf_state);
+    return guessed;
 }
 
 
