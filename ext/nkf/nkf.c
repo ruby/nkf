@@ -15,44 +15,38 @@
 #include "ruby/encoding.h"
 
 /* Replace nkf's getchar/putchar for variable modification */
-/* we never use getc, ungetc */
+/* we never use ungetc */
 
 #undef getc
 #undef ungetc
-#define getc(f)         (input_ctr>=i_len?-1:input[input_ctr++])
-#define ungetc(c,f)     input_ctr--
+#define getc(f)         rb_nkf_getc(nkf_state)
+#define ungetc(c,f)     rb_nkf_ungetc(nkf_state, c)
 
 #define INCSIZE         32
 #undef putchar
 #undef TRUE
 #undef FALSE
-#define putchar(c)      rb_nkf_putchar(c)
+#define putchar(c)      rb_nkf_putchar(nkf_state, c)
 
 /* Input/Output pointers */
 
-static unsigned char *output;
-static unsigned char *input;
-static int input_ctr;
-static int i_len;
-static int output_ctr;
-static int o_len;
-static int incsize;
+typedef struct {
+    unsigned char *input;
+    int input_ctr;
+    int i_len;
+    unsigned char *output;
+    int output_ctr;
+    int o_len;
+    int incsize;
+    VALUE result;
+} rb_nkf_callback_state_t;
 
-static VALUE result;
-
-static int
-rb_nkf_putchar(unsigned int c)
-{
-  if (output_ctr >= o_len) {
-    o_len += incsize;
-    rb_str_resize(result, o_len);
-    incsize *= 2;
-    output = (unsigned char *)RSTRING_PTR(result);
-  }
-  output[output_ctr++] = c;
-
-  return c;
-}
+struct nkf_state_t;
+static int rb_nkf_getc(struct nkf_state_t *nkf_state);
+#if 0
+static int rb_nkf_ungetc(struct nkf_state_t *nkf_state, int c);
+#endif
+static int rb_nkf_putchar(struct nkf_state_t *nkf_state, unsigned int c);
 
 /* Include kanji filter main part */
 /* getchar and putchar will be replaced during inclusion */
@@ -61,6 +55,42 @@ rb_nkf_putchar(unsigned int c)
 #include "nkf-utf8/config.h"
 #include "nkf-utf8/utf8tbl.c"
 #include "nkf-utf8/nkf.c"
+
+static int
+rb_nkf_getc(nkf_state_t *nkf_state)
+{
+    rb_nkf_callback_state_t *callback_state = nkf_state->callback_arg;
+
+    return callback_state->input_ctr >= callback_state->i_len ?
+        -1 : callback_state->input[callback_state->input_ctr++];
+}
+
+#if 0
+static int
+rb_nkf_ungetc(nkf_state_t *nkf_state, int c)
+{
+    rb_nkf_callback_state_t *callback_state = nkf_state->callback_arg;
+
+    callback_state->input_ctr--;
+    return c;
+}
+#endif
+
+static int
+rb_nkf_putchar(nkf_state_t *nkf_state, unsigned int c)
+{
+    rb_nkf_callback_state_t *callback_state = nkf_state->callback_arg;
+
+    if (callback_state->output_ctr >= callback_state->o_len) {
+        callback_state->o_len += callback_state->incsize;
+        rb_str_resize(callback_state->result, callback_state->o_len);
+        callback_state->incsize *= 2;
+        callback_state->output = (unsigned char *)RSTRING_PTR(callback_state->result);
+    }
+    callback_state->output[callback_state->output_ctr++] = c;
+
+    return c;
+}
 
 rb_encoding* rb_nkf_enc_get(const char *name)
 {
@@ -75,7 +105,7 @@ rb_encoding* rb_nkf_enc_get(const char *name)
     return rb_enc_from_index(idx);
 }
 
-int nkf_split_options(const char *arg)
+static int nkf_split_options(nkf_state_t *nkf_state, const char *arg)
 {
     int count = 0;
     unsigned char option[256];
@@ -109,7 +139,7 @@ int nkf_split_options(const char *arg)
             is_double_quoted = TRUE;
         }else if(arg[i] == ' '){
             option[j] = '\0';
-            options(option);
+            options(nkf_state, option);
             j = 0;
         }else{
             option[j++] = arg[i];
@@ -117,7 +147,7 @@ int nkf_split_options(const char *arg)
     }
     if(j){
         option[j] = '\0';
-        options(option);
+        options(nkf_state, option);
     }
     return count;
 }
@@ -136,10 +166,16 @@ int nkf_split_options(const char *arg)
 static VALUE
 rb_nkf_convert(VALUE obj, VALUE opt, VALUE src)
 {
+    nkf_state_t nkf_state_object = {0};
+    nkf_state_t *nkf_state = &nkf_state_object;
+    rb_nkf_callback_state_t callback_state;
     VALUE tmp;
-    reinit();
-    nkf_split_options(StringValueCStr(opt));
-    if (!output_encoding) rb_raise(rb_eArgError, "no output encoding given");
+    nkf_state_init(nkf_state);
+    nkf_split_options(nkf_state, StringValueCStr(opt));
+    if (!output_encoding) {
+        nkf_state_dispose(nkf_state);
+        rb_raise(rb_eArgError, "no output encoding given");
+    }
 
     switch (nkf_enc_to_index(output_encoding)) {
     case UTF_8_BOM:    output_encoding = nkf_enc_from_index(UTF_8); break;
@@ -150,31 +186,33 @@ rb_nkf_convert(VALUE obj, VALUE opt, VALUE src)
     }
     output_bom_f = FALSE;
 
-    incsize = INCSIZE;
+    callback_state.incsize = INCSIZE;
 
-    input_ctr = 0;
-    input = (unsigned char *)StringValuePtr(src);
-    i_len = RSTRING_LENINT(src);
-    tmp = rb_str_new(0, i_len*3 + 10);
+    callback_state.input_ctr = 0;
+    callback_state.input = (unsigned char *)StringValuePtr(src);
+    callback_state.i_len = RSTRING_LENINT(src);
+    tmp = rb_str_new(0, callback_state.i_len*3 + 10);
 
-    output_ctr = 0;
-    output     = (unsigned char *)RSTRING_PTR(tmp);
-    o_len      = RSTRING_LENINT(tmp);
-    *output    = '\0';
+    callback_state.output_ctr = 0;
+    callback_state.output     = (unsigned char *)RSTRING_PTR(tmp);
+    callback_state.o_len      = RSTRING_LENINT(tmp);
+    callback_state.result     = tmp;
+    *callback_state.output    = '\0';
 
     /* use _result_ begin*/
-    result = tmp;
-    kanji_convert(NULL);
-    result = Qnil;
+    nkf_state->callback_arg = &callback_state;
+    kanji_convert(nkf_state, NULL);
+    nkf_state->callback_arg = NULL;
     /* use _result_ end */
 
-    rb_str_set_len(tmp, output_ctr);
+    rb_str_set_len(tmp, callback_state.output_ctr);
 
     if (mimeout_f)
         rb_enc_associate(tmp, rb_usascii_encoding());
     else
         rb_enc_associate(tmp, rb_nkf_enc_get(nkf_enc_name(output_encoding)));
 
+    nkf_state_dispose(nkf_state);
     return tmp;
 }
 
@@ -190,17 +228,23 @@ rb_nkf_convert(VALUE obj, VALUE opt, VALUE src)
 static VALUE
 rb_nkf_guess(VALUE obj, VALUE src)
 {
-    reinit();
+    nkf_state_t nkf_state_object = {0};
+    nkf_state_t *nkf_state = &nkf_state_object;
+    rb_nkf_callback_state_t callback_state = {0};
+    VALUE guessed;
+    nkf_state_init(nkf_state);
 
-    input_ctr = 0;
-    input = (unsigned char *)StringValuePtr(src);
-    i_len = RSTRING_LENINT(src);
+    callback_state.input_ctr = 0;
+    callback_state.input = (unsigned char *)StringValuePtr(src);
+    callback_state.i_len = RSTRING_LENINT(src);
 
     guess_f = TRUE;
-    kanji_convert( NULL );
-    guess_f = FALSE;
+    nkf_state->callback_arg = &callback_state;
+    kanji_convert(nkf_state, NULL);
 
-    return rb_enc_from_encoding(rb_nkf_enc_get(get_guessed_code()));
+    guessed = rb_enc_from_encoding(rb_nkf_enc_get(get_guessed_code(nkf_state)));
+    nkf_state_dispose(nkf_state);
+    return guessed;
 }
 
 
@@ -477,6 +521,10 @@ rb_nkf_guess(VALUE obj, VALUE src)
 void
 Init_nkf(void)
 {
+#ifdef HAVE_RB_EXT_RACTOR_SAFE
+    rb_ext_ractor_safe(true);
+#endif
+
     VALUE mNKF = rb_define_module("NKF");
 
     rb_define_module_function(mNKF, "nkf", rb_nkf_convert, 2);
