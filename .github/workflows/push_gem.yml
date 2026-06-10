@@ -1,0 +1,63 @@
+name: Publish gem to rubygems.org
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    if: github.repository == 'ruby/nkf'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: rubygems.org
+      url: https://rubygems.org/gems/nkf
+
+    permissions:
+      contents: write
+      id-token: write
+
+    strategy:
+      matrix:
+        ruby: ["ruby", "jruby"]
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v5.0.1
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@d5126b9b3579e429dd52e51e68624dda2e05be25 # v1.267.0
+        with:
+          ruby-version: ${{ matrix.ruby }}
+
+        # https://github.com/rubygems/rubygems/issues/5882
+      - name: Install dependencies and build for JRuby
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jdk maven
+          gem update --system
+          gem install ruby-maven rake-compiler --no-document
+          rake compile
+        if: matrix.ruby == 'jruby'
+
+      - name: Install dependencies
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Publish to RubyGems
+        uses: rubygems/release-gem@6317d8d1f7e28c24d28f6eff169ea854948bd9f7 # v1.2.0
+
+      - name: Create GitHub release
+        run: |
+          tag_name="$(git describe --tags --abbrev=0)"
+          gh release create "${tag_name}" --verify-tag --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: matrix.ruby != 'jruby'
