@@ -531,16 +531,27 @@ Init_nkf(void)
     rb_define_module_function(mNKF, "guess", rb_nkf_guess, 1);
     rb_define_alias(rb_singleton_class(mNKF), "guess", "guess");
 
+    /* Auto-detection encoding */
     rb_define_const(mNKF, "AUTO",	Qnil);
+    /* No conversion */
     rb_define_const(mNKF, "NOCONV",	Qnil);
+    /* Unknown encoding */
     rb_define_const(mNKF, "UNKNOWN",	Qnil);
+    /* Binary encoding */
     rb_define_const(mNKF, "BINARY",	rb_enc_from_encoding(rb_nkf_enc_get("BINARY")));
+    /* US-ASCII encoding */
     rb_define_const(mNKF, "ASCII",	rb_enc_from_encoding(rb_nkf_enc_get("US-ASCII")));
+    /* IOS-2022-JP encoding */
     rb_define_const(mNKF, "JIS",	rb_enc_from_encoding(rb_nkf_enc_get("ISO-2022-JP")));
+    /* EUC-JP encoding */
     rb_define_const(mNKF, "EUC",	rb_enc_from_encoding(rb_nkf_enc_get("EUC-JP")));
+    /* Shift_JIS encoding */
     rb_define_const(mNKF, "SJIS",	rb_enc_from_encoding(rb_nkf_enc_get("Shift_JIS")));
+    /* UTF-8 encoding */
     rb_define_const(mNKF, "UTF8",	rb_enc_from_encoding(rb_utf8_encoding()));
+    /* UTF-16 encoding */
     rb_define_const(mNKF, "UTF16",	rb_enc_from_encoding(rb_nkf_enc_get("UTF-16BE")));
+    /* UTF-32 encoding */
     rb_define_const(mNKF, "UTF32",	rb_enc_from_encoding(rb_nkf_enc_get("UTF-32BE")));
 
     /* Full version string of nkf */
