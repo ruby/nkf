@@ -6586,6 +6586,7 @@ options(nkf_state_t *nkf_state, unsigned char *cp)
 #ifndef PERL_XS
 		if (strcmp(long_option[i].name, "help") == 0){
 		    usage();
+		    nkf_state_dispose(nkf_state);
 		    exit(EXIT_SUCCESS);
 		}
 #endif
@@ -6863,10 +6864,12 @@ options(nkf_state_t *nkf_state, unsigned char *cp)
 #ifndef PERL_XS
 	case 'V':
 	    show_configuration();
+	    nkf_state_dispose(nkf_state);
 	    exit(EXIT_SUCCESS);
 	    break;
 	case 'v':
 	    version();
+	    nkf_state_dispose(nkf_state);
 	    exit(EXIT_SUCCESS);
 	    break;
 #endif
@@ -7181,7 +7184,7 @@ main(int argc, char **argv)
     if (binmode_f == TRUE)
 #if defined(__OS2__) && (defined(__IBMC__) || defined(__IBMCPP__))
 	if (freopen("","wb",stdout) == NULL)
-	    return (-1);
+	    goto error;
 #else
     setbinmode(stdout);
 #endif
@@ -7194,7 +7197,7 @@ main(int argc, char **argv)
     if (argc == 0) {
 	if (binmode_f == TRUE)
 #if defined(__OS2__) && (defined(__IBMC__) || defined(__IBMCPP__))
-	    if (freopen("","rb",stdin) == NULL) return (-1);
+	    if (freopen("","rb",stdin) == NULL) goto error;
 #else
 	setbinmode(stdin);
 #endif
@@ -7256,7 +7259,7 @@ main(int argc, char **argv)
 			    || dup2(fd, fileno(stdout)) < 0
 			   ){
 			    perror(origfname);
-			    return -1;
+			    goto error;
 			}
 		    }else
 #endif
@@ -7269,12 +7272,12 @@ main(int argc, char **argv)
 
 		    if(freopen(outfname, "w", stdout) == NULL) {
 			perror (outfname);
-			return (-1);
+			goto error;
 		    }
 		    if (binmode_f == TRUE) {
 #if defined(__OS2__) && (defined(__IBMC__) || defined(__IBMCPP__))
 			if (freopen("","wb",stdout) == NULL)
-			    return (-1);
+			    goto error;
 #else
 			setbinmode(stdout);
 #endif
@@ -7283,7 +7286,7 @@ main(int argc, char **argv)
 		if (binmode_f == TRUE)
 #if defined(__OS2__) && (defined(__IBMC__) || defined(__IBMCPP__))
 		    if (freopen("","rb",fin) == NULL)
-			return (-1);
+			goto error;
 #else
 		setbinmode(fin);
 #endif
@@ -7363,7 +7366,7 @@ main(int argc, char **argv)
 	    }
 	}
 	if (is_argument_error)
-	    return(-1);
+	    goto error;
     }
 #ifdef EASYWIN /*Easy Win */
     if (file_out_f == FALSE)
@@ -7374,6 +7377,11 @@ main(int argc, char **argv)
     if (file_out_f == TRUE)
 	fclose(stdout);
 #endif /*Easy Win */
-    return (0);
+    nkf_state_dispose(nkf_state);
+    return EXIT_SUCCESS;
+
+error:
+    nkf_state_dispose(nkf_state);
+    return EXIT_FAILURE;
 }
 #endif /* WIN32DLL */
