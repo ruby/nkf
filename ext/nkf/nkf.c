@@ -426,7 +426,7 @@ rb_nkf_guess(VALUE obj, VALUE src)
  *
  *  === +-L+[uwm]
  *
- *  new line mode
+ *  New line mode.
  *  Without this option, nkf doesn't convert line breaks.
  *
  *  [+-Lu+] unix (LF)
@@ -437,20 +437,20 @@ rb_nkf_guess(VALUE obj, VALUE src)
  *
  *  === +--fj+ +--unix+ +--mac+ +--msdos+ +--windows+
  *
- *  convert for these system
+ *  Convert for these system.
  *
  *  === +--jis+ +--euc+ +--sjis+ +--mime+ +--base64+
  *
- *  convert for named code
+ *  Convert for named code.
  *
  *  === +--jis-input+ +--euc-input+ +--sjis-input+ +--mime-input+ +--base64-input+
  *
- *  assume input system
+ *  Assume input system.
  *
  *  === +--ic=+_input-codeset_ +--oc=+_output-codeset_
  *
  *  Set the input or output codeset.
- *  NKF supports following codesets and those codeset name are case insensitive.
+ *  Nkf supports following codesets and those codeset name are case insensitive.
  *
  *  [ISO-2022-JP] a.k.a. RFC1468, 7bit JIS, JUNET
  *
