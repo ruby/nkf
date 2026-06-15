@@ -1,0 +1,6 @@
+BSDL
+COPYING
+LEGAL
+README.md
+ext/nkf/*.c
+lib/*.rb
