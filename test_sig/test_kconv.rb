@@ -5,7 +5,7 @@ require_relative "test_helper"
 
 class KconvTest < Test::Unit::TestCase
   include TestHelper
-  library "kconv"
+  library "nkf"
   testing "singleton(::Kconv)"
 
   def test_guess
